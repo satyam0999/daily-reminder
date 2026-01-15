@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import Navbar from '../components/Navbar'
 import GoalCheckbox from '../components/GoalCheckbox'
 import JournalEntry from '../components/JournalEntry'
+import YearProgressBar from '../components/YearProgressBar'
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -11,6 +12,7 @@ export default function Dashboard() {
   const [completedIds, setCompletedIds] = useState(new Set())
   const [journalText, setJournalText] = useState('')
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('daily')
 
   const today = new Date().toISOString().split('T')[0]
   const displayDate = new Date().toLocaleDateString('en-US', {
@@ -98,6 +100,27 @@ export default function Dashboard() {
   const completedCount = completedIds.size
   const totalCount = goals.length
 
+  // Calculate remaining daily goals
+  const remainingDailyGoals = dailyGoals.filter(g => !completedIds.has(g.id)).length
+
+  // Get goals for active tab
+  const getActiveGoals = () => {
+    switch(activeTab) {
+      case 'daily': return dailyGoals
+      case 'weekly': return weeklyGoals
+      case 'monthly': return monthlyGoals
+      default: return dailyGoals
+    }
+  }
+
+  const activeGoals = getActiveGoals()
+
+  const tabConfig = [
+    { id: 'daily', label: 'Daily', color: 'blue', count: dailyGoals.length },
+    { id: 'weekly', label: 'Weekly', color: 'green', count: weeklyGoals.length },
+    { id: 'monthly', label: 'Monthly', color: 'purple', count: monthlyGoals.length }
+  ]
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100">
@@ -113,66 +136,84 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-100">
       <Navbar />
       <div className="max-w-6xl mx-auto p-6">
+        {/* Year Progress Bar */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">{displayDate}</h1>
-          <p className="text-lg text-gray-600 mt-2">
-            You completed {completedCount}/{totalCount} goals today
-          </p>
+          <YearProgressBar year={2026} />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          {/* Daily Goals */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h2 className="text-xl font-semibold text-blue-600 mb-4">Daily Goals</h2>
-            <div className="space-y-2">
-              {dailyGoals.map(goal => (
-                <GoalCheckbox
-                  key={goal.id}
-                  goal={goal}
-                  isChecked={completedIds.has(goal.id)}
-                  onToggle={toggleGoal}
-                />
-              ))}
-              {dailyGoals.length === 0 && (
-                <p className="text-gray-500 text-sm">No daily goals</p>
-              )}
+        {/* Header with Daily Goals Counter */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-800">{displayDate}</h1>
+          <div className="flex items-center gap-4 mt-2">
+            <p className="text-lg text-gray-600">
+              You completed {completedCount}/{totalCount} goals today
+            </p>
+            <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-semibold">
+              {remainingDailyGoals} daily {remainingDailyGoals === 1 ? 'goal' : 'goals'} remaining
             </div>
           </div>
+        </div>
 
-          {/* Weekly Goals */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h2 className="text-xl font-semibold text-green-600 mb-4">Weekly Goals</h2>
-            <div className="space-y-2">
-              {weeklyGoals.map(goal => (
-                <GoalCheckbox
-                  key={goal.id}
-                  goal={goal}
-                  isChecked={completedIds.has(goal.id)}
-                  onToggle={toggleGoal}
-                />
-              ))}
-              {weeklyGoals.length === 0 && (
-                <p className="text-gray-500 text-sm">No weekly goals</p>
-              )}
-            </div>
+        {/* Tabs */}
+        <div className="mb-6">
+          <div className="flex gap-2 border-b border-gray-300">
+            {tabConfig.map(tab => {
+              const isActive = activeTab === tab.id
+              const tabColors = {
+                daily: { 
+                  active: 'text-blue-600 border-b-2 border-blue-600',
+                  badge: 'bg-blue-100 text-blue-700'
+                },
+                weekly: { 
+                  active: 'text-green-600 border-b-2 border-green-600',
+                  badge: 'bg-green-100 text-green-700'
+                },
+                monthly: { 
+                  active: 'text-purple-600 border-b-2 border-purple-600',
+                  badge: 'bg-purple-100 text-purple-700'
+                }
+              }
+              
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-6 py-3 font-semibold transition-colors relative ${
+                    isActive
+                      ? tabColors[tab.id].active
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {tab.label}
+                  <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+                    isActive 
+                      ? tabColors[tab.id].badge
+                      : 'bg-gray-200 text-gray-600'
+                  }`}>
+                    {tab.count}
+                  </span>
+                </button>
+              )
+            })}
           </div>
+        </div>
 
-          {/* Monthly Goals */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h2 className="text-xl font-semibold text-purple-600 mb-4">Monthly Goals</h2>
-            <div className="space-y-2">
-              {monthlyGoals.map(goal => (
-                <GoalCheckbox
-                  key={goal.id}
-                  goal={goal}
-                  isChecked={completedIds.has(goal.id)}
-                  onToggle={toggleGoal}
-                />
-              ))}
-              {monthlyGoals.length === 0 && (
-                <p className="text-gray-500 text-sm">No monthly goals</p>
-              )}
-            </div>
+        {/* Active Tab Content */}
+        <div className="bg-gray-50 p-6 rounded-lg mb-6">
+          <div className="space-y-3">
+            {activeGoals.map(goal => (
+              <GoalCheckbox
+                key={goal.id}
+                goal={goal}
+                isChecked={completedIds.has(goal.id)}
+                onToggle={toggleGoal}
+              />
+            ))}
+            {activeGoals.length === 0 && (
+              <p className="text-gray-500 text-center py-8">
+                No {activeTab} goals yet. Add some in the Goals page!
+              </p>
+            )}
           </div>
         </div>
 
